@@ -4,3 +4,4 @@ numpy
 transformers
 hydra-core>=1.2.0
 openai
+swig==4.0.1

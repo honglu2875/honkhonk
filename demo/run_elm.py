@@ -10,7 +10,9 @@ from hydra.core.hydra_config import HydraConfig
 from openelm import ELM
 from openelm.configs import defaults_elm, ELMConfig, MAPElitesConfig, PromptEnvConfig, \
     PromptModelConfig, CONFIGSTORE
+from openelm.elm import load_algorithm
 from openelm.environments.prompt.prompt import PromptEvolution, PromptGenotype
+from openelm.mutation_model import MutationModel, PromptModel
 
 
 @dataclass
@@ -156,9 +158,18 @@ class CustomELM(ELM):
         """
         The main class of ELM. Inherited to use CustomPromptEvolution.
         """
-        super().__init__(config, env)
+        self.config: ELMConfig = config
+        hydra_conf = HydraConfig.instance()
+        if hydra_conf.cfg is not None:
+            self.config.qd.output_dir = HydraConfig.get().runtime.output_dir
+        qd_name: str = self.config.qd.qd_name
         self.environment = CustomPromptEvolution(config=self.config.env,
-                                                 mutation_model=self.mutation_model,)
+                                                 mutation_model=self.mutation_model, )
+        self.mutation_model: MutationModel = PromptModel(self.config.model)
+        self.qd_algorithm = load_algorithm(qd_name)(
+            env=self.environment,
+            config=self.config.qd,
+        )
 
 
 """
