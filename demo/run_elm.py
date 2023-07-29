@@ -1,6 +1,10 @@
 from dataclasses import dataclass
+from typing import Any, Optional
+from omegaconf import MISSING
 
 import hydra
+from dataclasses import dataclass, field
+
 import numpy as np
 from hydra.core.config_store import ConfigStore
 from langchain import PromptTemplate
@@ -34,19 +38,43 @@ class CustomMAPElitesConfig(MAPElitesConfig):
     map_grid_size: tuple[int, ...] = (10,)
 
 
+defaults_elm = [
+    {"model": "custom_prompt"},
+    {"qd": "custom_mapelites"},
+    {"env": "custom_env"},
+    "_self_",
+]
 @dataclass
 class HonkConfig(ELMConfig):
+    """
     hydra = {
         "run": {
             "dir": "logs/elm/${hydra.job.override_dirname}/${now:%y-%m-%d_%H:%M}"
         }
     }
-    defaults = defaults_elm
+    defaults = field(default_factory=lambda: defaults_elm)
     model = CustomModelConfig()
     qd = CustomMAPElitesConfig()
     env = CustomEnvConfig()
     run_name = "honk"
+    """
+    hydra: Any = field(
+        default_factory=lambda: {
+            "run": {
+                "dir": "logs/elm/${hydra.job.override_dirname}/${now:%y-%m-%d_%H:%M}"
+            }
+        }
+    )
+    defaults: list[Any] = field(default_factory=lambda: defaults_elm)
+    model: Any = MISSING
+    qd: Any = MISSING
+    env: Any = MISSING
+    run_name: Optional[str] = None
 
+CONFIGSTORE.store(group="env", name="custom_env", node=CustomEnvConfig)
+CONFIGSTORE.store(group="model", name="custom_prompt", node=CustomModelConfig)
+CONFIGSTORE.store(group="qd", name="custom_mapelites", node=CustomMAPElitesConfig)
+CONFIGSTORE.store(name="honkelm", node=HonkConfig)
 
 @dataclass
 class RedTeamingPromptTask:
@@ -163,9 +191,9 @@ class CustomELM(ELM):
         if hydra_conf.cfg is not None:
             self.config.qd.output_dir = HydraConfig.get().runtime.output_dir
         qd_name: str = self.config.qd.qd_name
+        self.mutation_model: MutationModel = PromptModel(self.config.model)
         self.environment = CustomPromptEvolution(config=self.config.env,
                                                  mutation_model=self.mutation_model, )
-        self.mutation_model: MutationModel = PromptModel(self.config.model)
         self.qd_algorithm = load_algorithm(qd_name)(
             env=self.environment,
             config=self.config.qd,
@@ -178,7 +206,6 @@ The config is hard-coded as above.
 """
 
 
-CONFIGSTORE.store(name="honkelm", node=HonkConfig)
 
 
 @hydra.main(
