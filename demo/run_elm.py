@@ -1,7 +1,11 @@
 from dataclasses import dataclass
+
+import hydra
 import numpy as np
+from hydra.core.config_store import ConfigStore
 from langchain import PromptTemplate
 from omegaconf import OmegaConf
+from hydra.core.hydra_config import HydraConfig
 
 from openelm import ELM
 from openelm.configs import defaults_elm, ELMConfig, MAPElitesConfig, PromptEnvConfig, \
@@ -19,7 +23,7 @@ class CustomEnvConfig(PromptEnvConfig):
 @dataclass
 class CustomModelConfig(PromptModelConfig):
     model_name: str = "prompt"
-    model_path: str = "Salesforce/codegen-350M-mono"
+    model_path: str = "EleutherAI/pythia-2.8b-deduped"
 
 
 @dataclass
@@ -75,7 +79,7 @@ A:"""
 
 
 class CustomPromptEvolution(PromptEvolution):
-    def __init__(self, config, mutation_model, fitness_model):
+    def __init__(self, config, mutation_model, fitness_model=None):
         super().__init__(config, mutation_model, fitness_model)
         self.task = RedTeamingPromptTask()
 
@@ -153,7 +157,8 @@ class CustomELM(ELM):
         The main class of ELM. Inherited to use CustomPromptEvolution.
         """
         super().__init__(config, env)
-        self.environment = CustomPromptEvolution(config=self.config.env, mutation_model=self.mutation_model,)
+        self.environment = CustomPromptEvolution(config=self.config.env,
+                                                 mutation_model=self.mutation_model,)
 
 
 """
@@ -162,14 +167,24 @@ The config is hard-coded as above.
 """
 
 
-def main():
-    config = HonkConfig()
+cs = ConfigStore.instance()
+cs.store(name="honkelm", node=HonkConfig)
+
+
+@hydra.main(
+    config_name="honkelm",
+    version_base="1.2",
+)
+def main(config):
+    config.output_dir = HydraConfig.get().runtime.output_dir
+    #config = HydraConfig()
+    #config.set_config(HonkConfig())
     print("----------------- Config ---------------")
     print(OmegaConf.to_yaml(config))
     print("-----------------  End -----------------")
     config = OmegaConf.to_object(config)
 
-    elm = CustomELM(config)
+    elm = CustomELM(config, env=None)
 
     print(
         "Best Individual: ",
