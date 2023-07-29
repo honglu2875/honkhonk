@@ -9,7 +9,7 @@ from hydra.core.hydra_config import HydraConfig
 
 from openelm import ELM
 from openelm.configs import defaults_elm, ELMConfig, MAPElitesConfig, PromptEnvConfig, \
-    PromptModelConfig
+    PromptModelConfig, CONFIGSTORE
 from openelm.environments.prompt.prompt import PromptEvolution, PromptGenotype
 
 
@@ -40,7 +40,7 @@ class HonkConfig(ELMConfig):
         }
     }
     defaults = defaults_elm
-    model = PromptModelConfig()
+    model = CustomModelConfig()
     qd = CustomMAPElitesConfig()
     env = CustomEnvConfig()
     run_name = "honk"
@@ -167,8 +167,7 @@ The config is hard-coded as above.
 """
 
 
-cs = ConfigStore.instance()
-cs.store(name="honkelm", node=HonkConfig)
+CONFIGSTORE.store(name="honkelm", node=HonkConfig)
 
 
 @hydra.main(
