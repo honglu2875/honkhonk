@@ -30,8 +30,8 @@ class CustomEnvConfig(PromptEnvConfig):
 @dataclass
 class CustomModelConfig(PromptModelConfig):
     model_name: str = "prompt"
-    #model_path: str = "TheBloke/wizardLM-7B-HF"
-    model_path: str = "TheBloke/WizardLM-7B-uncensored-GPTQ"
+    model_path: str = "TheBloke/wizardLM-7B-HF"
+    #model_path: str = "TheBloke/WizardLM-7B-uncensored-GPTQ"
 
 
 @dataclass
