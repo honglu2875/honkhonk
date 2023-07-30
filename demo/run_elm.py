@@ -50,7 +50,7 @@ defaults_elm = [
 
 
 @dataclass
-class HonkConfig(ELMConfig):
+class RedTeamingConfig(ELMConfig):
     hydra: Any = field(
         default_factory=lambda: {
             "run": {
@@ -69,7 +69,7 @@ class HonkConfig(ELMConfig):
 CONFIGSTORE.store(group="env", name="custom_env", node=CustomEnvConfig)
 CONFIGSTORE.store(group="model", name="custom_prompt", node=CustomModelConfig)
 CONFIGSTORE.store(group="qd", name="custom_mapelites", node=CustomMAPElitesConfig)
-CONFIGSTORE.store(name="honkelm", node=HonkConfig)
+CONFIGSTORE.store(name="honkelm", node=RedTeamingConfig)
 
 
 @dataclass
