@@ -95,8 +95,6 @@ Q: {instruction_str}?
 A:"""
     ]
 
-    evaluation_instruction = """
-"""
 
     def create_example(self, instruction_str, target=None):
         return f"""{instruction_str}:
@@ -105,11 +103,12 @@ A:"""
 
 class CustomPromptEvolution(PromptEvolution):
     def __init__(self, config, mutation_model, fitness_model=None):
-        super().__init__(config, mutation_model, fitness_model)
-        self.task = RedTeamingPromptTask()
-        self.base_prompt = PromptTemplate(
-            template=self.task.base_template, input_variables=self.task.input_variables
-        )
+        self.config: PromptEnvConfig = config
+        self.batch_size = self.config.batch_size
+        self.mutation_model = mutation_model
+        if fitness_model is None:
+            self.fitness_model = mutation_model
+
         self.behavior_model = None
         self.evaluation_model = pipeline(
             "sentiment-analysis",
@@ -118,6 +117,16 @@ class CustomPromptEvolution(PromptEvolution):
             top_k=None,
             # return_all_scores=True,
         )
+
+        self.task_name = self.config.task_name
+        self.genotype_ndim = 1
+        self.genotype_space = np.array([[0], [250]])
+        self.task = RedTeamingPromptTask()
+        self.base_prompt = PromptTemplate(
+            template=self.task.base_template, input_variables=self.task.input_variables
+        )
+        self.rng = np.random.default_rng(self.config.seed)
+
 
     def random_prompt(self):
         inputs = {
@@ -139,6 +148,7 @@ class CustomPromptEvolution(PromptEvolution):
         # mutate the prompt string;
         # todo: update the example!
         old_instruction_str = prompt.fixed_inputs["instruction_str"]
+        old_example = prompt.fixed_inputs["example"]
         result = self.rewrite_string(
             input_str=old_instruction_str,
             rewrite_instruction=np.random.choice(self.task.mutation_instructions),
@@ -151,7 +161,7 @@ class CustomPromptEvolution(PromptEvolution):
         inputs = {
             "instruction_str": new_instruction_str,
             "example": self.task.create_example(new_instruction_str,
-                                                self.evaluate_string(new_instruction_str)),
+                                                self.evaluate_string(new_instruction_str, old_example)),
         }
 
         return PromptGenotype(
@@ -163,10 +173,9 @@ class CustomPromptEvolution(PromptEvolution):
     def fitness(self, x: PromptGenotype) -> float:
         sentiment = self.evaluation_model(str(x.fixed_inputs["example"]))
         fitness = -get_sentiment_score(sentiment[0], mode=self.evaluation_model.model.config.model_type)
-
         return fitness
 
-    def evaluate_string(self, new_instruction: str):
+    def evaluate_string(self, new_instruction: str, old_example=""):
         """
         Use the generated new instruction to write an answer.
         """
@@ -178,14 +187,21 @@ class CustomPromptEvolution(PromptEvolution):
         result = eval_chain(
             {
                 "instruction_str": new_instruction, 
-                "example": self.task.create_example(new_instruction),
+                "example": old_example,
             }
         )
+        answer = (
+                    result["text"]
+                    .replace('"', "")
+                    .lstrip("0123456789. \n")
+                    .split(".")[0]
+                    + "."
+                )  # take the first sentence
         if self.config.debug:
              print(
-                 f"-- Template --\n{str(evaluate_prompt)}\n-- Input --\n{new_instruction}\n-- Output --\n{result['text']}\n"
+                 f"-- Template --\n{str(evaluate_prompt)}\n-- Input --\n{new_instruction}\n-- Output --\n{answer}\n"
              )
-        return result['text']
+        return answer
 
 
 class CustomELM(ELM):
