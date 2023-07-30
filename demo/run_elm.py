@@ -44,7 +44,7 @@ class CustomMAPElitesConfig(MAPElitesConfig):
     qd_name: str = "mapelites"
     map_grid_size: tuple[int, ...] = (10,)
     init_steps: int = 1
-    total_steps: int = 5
+    total_steps: int = 30
 
 
 defaults_elm = [
