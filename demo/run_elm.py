@@ -30,7 +30,7 @@ class CustomEnvConfig(PromptEnvConfig):
 @dataclass
 class CustomModelConfig(PromptModelConfig):
     model_name: str = "prompt"
-    model_path: str = "EleutherAI/pythia-410m"
+    model_path: str = "TheBloke/wizardLM-7B-HF"
 
 
 @dataclass
