@@ -24,12 +24,14 @@ class CustomEnvConfig(PromptEnvConfig):
     env_name: str = "prompt_evolution"
     task_name: str = "antonym"  # toy or antonym or animal or cot
     evals_per_prompt: int = 10
+    debug: bool = True
+    batch_size: int = 1
 
 
 @dataclass
 class CustomModelConfig(PromptModelConfig):
     model_name: str = "prompt"
-    model_path: str = "EleutherAI/pythia-2.8b-deduped"
+    model_path: str = "EleutherAI/pythia-410m"
 
 
 @dataclass
@@ -44,20 +46,10 @@ defaults_elm = [
     {"env": "custom_env"},
     "_self_",
 ]
+
+
 @dataclass
 class HonkConfig(ELMConfig):
-    """
-    hydra = {
-        "run": {
-            "dir": "logs/elm/${hydra.job.override_dirname}/${now:%y-%m-%d_%H:%M}"
-        }
-    }
-    defaults = field(default_factory=lambda: defaults_elm)
-    model = CustomModelConfig()
-    qd = CustomMAPElitesConfig()
-    env = CustomEnvConfig()
-    run_name = "honk"
-    """
     hydra: Any = field(
         default_factory=lambda: {
             "run": {
@@ -71,6 +63,8 @@ class HonkConfig(ELMConfig):
     env: Any = MISSING
     run_name: Optional[str] = None
     batch_size: int = 1
+    init_steps: int = 2
+    total_steps: int = 5
 
 
 CONFIGSTORE.store(group="env", name="custom_env", node=CustomEnvConfig)
