@@ -31,7 +31,12 @@ class CustomEnvConfig(PromptEnvConfig):
 class CustomModelConfig(PromptModelConfig):
     model_name: str = "prompt"
     model_path: str = "TheBloke/wizardLM-7B-HF"
-    #model_path: str = "TheBloke/WizardLM-7B-uncensored-GPTQ"
+
+
+@dataclass
+class CustomResponseModelConfig(PromptModelConfig):
+    model_name: str = "prompt"
+    model_path: str = "TheBloke/WizardLM-7B-uncensored-GPTQ"
 
 
 @dataclass
@@ -44,6 +49,7 @@ class CustomMAPElitesConfig(MAPElitesConfig):
 
 defaults_elm = [
     {"model": "custom_prompt"},
+    {"response_model": "custom_response_model"},
     {"qd": "custom_mapelites"},
     {"env": "custom_env"},
     "_self_",
@@ -61,6 +67,7 @@ class RedTeamingConfig(ELMConfig):
     )
     defaults: list[Any] = field(default_factory=lambda: defaults_elm)
     model: Any = MISSING
+    response_model: Any = MISSING
     qd: Any = MISSING
     env: Any = MISSING
     run_name: Optional[str] = None
@@ -69,13 +76,14 @@ class RedTeamingConfig(ELMConfig):
 
 CONFIGSTORE.store(group="env", name="custom_env", node=CustomEnvConfig)
 CONFIGSTORE.store(group="model", name="custom_prompt", node=CustomModelConfig)
+CONFIGSTORE.store(group="response_model", name="custom_response_model", node=CustomResponseModelConfig)
 CONFIGSTORE.store(group="qd", name="custom_mapelites", node=CustomMAPElitesConfig)
-CONFIGSTORE.store(name="honkelm", node=RedTeamingConfig)
+CONFIGSTORE.store(name="redteamingelm", node=RedTeamingConfig)
 
 
 @dataclass
 class RedTeamingPromptTask:
-    #base_template = "Q: {old_question}\nA: {old_answer}\n" \
+    # base_template = "Q: {old_question}\nA: {old_answer}\n" \
     #                "Following the example, answer the question:\nQ: {instruction_str}\nA: "
     base_template = "{old_question}\n\n### Response: {old_answer}\n" \
                     "Following the example, answer the question:\n{instruction_str}\n\n### Response:"
@@ -100,12 +108,12 @@ Original: {instruction_str}
 
 
 class CustomPromptEvolution(PromptEvolution):
-    def __init__(self, config, mutation_model, fitness_model=None):
+    def __init__(self, config, mutation_model, response_model=None):
         self.config: PromptEnvConfig = config
         self.batch_size = self.config.batch_size
         self.mutation_model = mutation_model
+        self.response_model = response_model or self.mutation_model
 
-        self.behavior_model = None
         self.fitness_model = pipeline(
             "sentiment-analysis",
             model="cardiffnlp/twitter-roberta-base-sentiment",
@@ -113,6 +121,7 @@ class CustomPromptEvolution(PromptEvolution):
             top_k=None,
             # return_all_scores=True,
         )
+        self.behavior_model = self.fitness_model
 
         self.task_name = self.config.task_name
         self.genotype_ndim = 1
@@ -199,7 +208,7 @@ class CustomPromptEvolution(PromptEvolution):
             template=self.task.base_template,
             input_variables=self.task.input_variables
         )
-        eval_chain = LLMChain(llm=self.mutation_model.model, prompt=evaluate_prompt)
+        eval_chain = LLMChain(llm=self.response_model.model, prompt=evaluate_prompt)
         result = eval_chain(
             {
                 "instruction_str": new_instruction,
@@ -229,14 +238,18 @@ class CustomELM(ELM):
         """
         The main class of ELM. Inherited to use CustomPromptEvolution.
         """
-        self.config: ELMConfig = config
+        self.config: RedTeamingConfig = config
         hydra_conf = HydraConfig.instance()
         if hydra_conf.cfg is not None:
             self.config.qd.output_dir = HydraConfig.get().runtime.output_dir
         qd_name: str = self.config.qd.qd_name
         self.mutation_model: MutationModel = PromptModel(self.config.model)
-        self.environment = CustomPromptEvolution(config=self.config.env,
-                                                 mutation_model=self.mutation_model, )
+        self.response_model = PromptModel(self.config.response_model)
+        self.environment = CustomPromptEvolution(
+            config=self.config.env,
+            mutation_model=self.mutation_model,
+            response_model=self.response_model,
+        )
         self.qd_algorithm = load_algorithm(qd_name)(
             env=self.environment,
             config=self.config.qd,
@@ -244,13 +257,13 @@ class CustomELM(ELM):
 
 
 """
-This is a demo for red-teaming prompt evolution evaluated on a prompt-based reward model.
+This is a demo for red-teaming prompt evolution evaluated on a sentiment reward model.
 The config is hard-coded as above.
 """
 
 
 @hydra.main(
-    config_name="honkelm",
+    config_name="redteamingelm",
     version_base="1.2",
 )
 def main(config):
