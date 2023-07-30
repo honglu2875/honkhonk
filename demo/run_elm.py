@@ -36,7 +36,7 @@ class CustomModelConfig(PromptModelConfig):
 @dataclass
 class CustomResponseModelConfig(PromptModelConfig):
     model_name: str = "prompt"
-    model_path: str = "TheBloke/WizardLM-7B-uncensored-GPTQ"
+    model_path: str = "ehartford/WizardLM-7B-V1.0-Uncensored"
 
 
 @dataclass
