@@ -95,10 +95,8 @@ Q: {instruction_str}?
 A:"""
     ]
 
-
     def create_example(self, instruction_str, target=None):
-        return f"""{instruction_str}:
-{target or self.target}"""
+        return f"{instruction_str}\n{target or self.target}"
 
 
 class CustomPromptEvolution(PromptEvolution):
@@ -126,7 +124,6 @@ class CustomPromptEvolution(PromptEvolution):
             template=self.task.base_template, input_variables=self.task.input_variables
         )
         self.rng = np.random.default_rng(self.config.seed)
-
 
     def random_prompt(self):
         inputs = {
@@ -173,6 +170,11 @@ class CustomPromptEvolution(PromptEvolution):
     def fitness(self, x: PromptGenotype) -> float:
         sentiment = self.evaluation_model(str(x.fixed_inputs["example"]))
         fitness = -get_sentiment_score(sentiment[0], mode=self.evaluation_model.model.config.model_type)
+        if self.config.debug:
+            print(
+                f"Calling fitness function:\n"
+                f"-- instruction_str --\n{x.fixed_inputs['instruction_str']}\n-- Fitness: {fitness} --\n-- Behavior: {x.to_phenotype()} --\n"
+            )
         return fitness
 
     def evaluate_string(self, new_instruction: str, old_example=""):
@@ -180,27 +182,29 @@ class CustomPromptEvolution(PromptEvolution):
         Use the generated new instruction to write an answer.
         """
         evaluate_prompt = PromptTemplate(
-            template=self.task.base_template, 
+            template=self.task.base_template,
             input_variables=self.task.input_variables
         )
         eval_chain = LLMChain(llm=self.mutation_model.model, prompt=evaluate_prompt)
         result = eval_chain(
             {
-                "instruction_str": new_instruction, 
+                "instruction_str": new_instruction,
                 "example": old_example,
             }
         )
         answer = (
-                    result["text"]
-                    .replace('"', "")
-                    .lstrip("0123456789. \n")
-                    .split(".")[0]
-                    + "."
-                )  # take the first sentence
+                result["text"]
+                .replace('"', "")
+                .lstrip("0123456789. \n")
+                .split("\n")[0]
+                .split(".")[0]
+                + "."
+        )  # take the first line and first sentence
         if self.config.debug:
-             print(
-                 f"-- Template --\n{str(evaluate_prompt)}\n-- Input --\n{new_instruction}\n-- Output --\n{answer}\n"
-             )
+            print(
+                f"Generate answer:\n"
+                f"-- Template --\n{self.task.base_template}\n-- Input --\n{new_instruction}\n-- Output --\n{answer}\n"
+            )
         return answer
 
 
