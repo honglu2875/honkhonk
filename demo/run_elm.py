@@ -76,6 +76,7 @@ CONFIGSTORE.store(group="model", name="custom_prompt", node=CustomModelConfig)
 CONFIGSTORE.store(group="qd", name="custom_mapelites", node=CustomMAPElitesConfig)
 CONFIGSTORE.store(name="honkelm", node=HonkConfig)
 
+
 @dataclass
 class RedTeamingPromptTask:
     base_template = "{example}\nFollow the example, answer the question:\n{prompt_str}\n"
@@ -111,6 +112,9 @@ class CustomPromptEvolution(PromptEvolution):
     def __init__(self, config, mutation_model, fitness_model=None):
         super().__init__(config, mutation_model, fitness_model)
         self.task = RedTeamingPromptTask()
+        self.base_prompt = PromptTemplate(
+            template=self.task.base_template, input_variables=self.task.input_variables
+        )
 
     def random_prompt(self):
         inputs = {
@@ -205,16 +209,12 @@ The config is hard-coded as above.
 """
 
 
-
-
 @hydra.main(
     config_name="honkelm",
     version_base="1.2",
 )
 def main(config):
     config.output_dir = HydraConfig.get().runtime.output_dir
-    #config = HydraConfig()
-    #config.set_config(HonkConfig())
     print("----------------- Config ---------------")
     print(OmegaConf.to_yaml(config))
     print("-----------------  End -----------------")
