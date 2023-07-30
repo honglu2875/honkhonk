@@ -256,8 +256,11 @@ def main(config):
 
     print(
         "Map: ",
-        elm.qd_algorithm.genomes,
     )
+    array = elm.qd_algorithm.genomes.array
+
+    for idx in range(len(array)):
+        print(array[idx])
 
 
 if __name__ == "__main__":
