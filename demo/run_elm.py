@@ -104,11 +104,9 @@ class CustomPromptEvolution(PromptEvolution):
         self.config: PromptEnvConfig = config
         self.batch_size = self.config.batch_size
         self.mutation_model = mutation_model
-        if fitness_model is None:
-            self.fitness_model = mutation_model
 
         self.behavior_model = None
-        self.evaluation_model = pipeline(
+        self.fitness_model = pipeline(
             "sentiment-analysis",
             model="cardiffnlp/twitter-roberta-base-sentiment",
             # model="distilbert-base-uncased-finetuned-sst-2-english",
@@ -168,8 +166,8 @@ class CustomPromptEvolution(PromptEvolution):
         )
 
     def fitness(self, x: PromptGenotype) -> float:
-        sentiment = self.evaluation_model(str(x.fixed_inputs["example"]))
-        fitness = -get_sentiment_score(sentiment[0], mode=self.evaluation_model.model.config.model_type)
+        sentiment = self.fitness_model(str(x.fixed_inputs["example"]))
+        fitness = -get_sentiment_score(sentiment[0], mode=self.fitness_model.model.config.model_type)
         if self.config.debug:
             print(
                 f"\nCalling fitness function:\n"
@@ -249,6 +247,11 @@ def main(config):
     print(
         "Best Individual: ",
         elm.run(init_steps=config.qd.init_steps, total_steps=config.qd.total_steps),
+    )
+
+    print(
+        "Map: ",
+        elm.qd_algorithm.map,
     )
 
 
