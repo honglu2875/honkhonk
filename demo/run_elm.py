@@ -36,13 +36,14 @@ class CustomModelConfig(PromptModelConfig):
 @dataclass
 class CustomResponseModelConfig(PromptModelConfig):
     model_name: str = "prompt"
-    model_path: str = "TheBloke/WizardLM-7B-uncensored-GPTQ"
+    #model_path: str = "TheBloke/WizardLM-7B-uncensored-GPTQ"
+    model_path = "ehartford/WizardLM-7B-V1.0-Uncensored"
 
 
 @dataclass
 class CustomMAPElitesConfig(MAPElitesConfig):
     qd_name: str = "mapelites"
-    map_grid_size: tuple[int, ...] = (10,)
+    map_grid_size: tuple[int, ...] = (10,)  # dim of map_grid_size is somehow multiplied to behavior_ndim... not sure why... Therefore, even if we have a 2d map, we have to specify a 1d tuple here
     init_steps: int = 1
     total_steps: int = 5
 
@@ -124,8 +125,8 @@ class CustomPromptEvolution(PromptEvolution):
         self.behavior_model = self.fitness_model
 
         self.task_name = self.config.task_name
-        self.genotype_ndim = 1
-        self.genotype_space = np.array([[0], [250]])
+        self.genotype_ndim = 2
+        self.genotype_space = np.array([[0, -1], [250, 1]])
         self.task = RedTeamingPromptTask()
         self.base_prompt = PromptTemplate(
             template=self.task.base_template, input_variables=self.task.input_variables
@@ -285,8 +286,10 @@ def main(config):
     )
     array = elm.qd_algorithm.genomes.array
 
-    for idx in range(len(array)):
-        print(array[idx])
+    for i in range(array.shape[0]):
+        for j in range(array.shape[1]):
+            print(str(array[i, j])[:10], end=" ")
+        print()
 
 
 if __name__ == "__main__":
