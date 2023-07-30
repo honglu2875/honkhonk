@@ -162,6 +162,13 @@ class CustomPromptEvolution(PromptEvolution):
             "old_answer": self.evaluate_string(old_instruction_str, old_question, old_answer),
         }
 
+        if self.config.debug:
+            print(
+                f"\n===========================\nMutating:\n"
+                f"-- old_instruction_str --\n{old_instruction_str}\n-- new_instruction_str: {new_instruction_str} --\n"
+                f"===========================\n"
+            )
+
         return PromptGenotype(
             prompt=self.base_prompt,
             fixed_inputs=inputs,
@@ -177,8 +184,9 @@ class CustomPromptEvolution(PromptEvolution):
         fitness = -get_sentiment_score(sentiment[0], mode=self.fitness_model.model.config.model_type)
         if self.config.debug:
             print(
-                f"\nCalling fitness function:\n"
+                f"\n===========================\nCalling fitness function:\n"
                 f"-- instruction_str --\n{x.fixed_inputs['instruction_str']}\n-- Fitness: {fitness} --\n-- Behavior: {x.to_phenotype()} --\n"
+                f"===========================\n"
             )
         return fitness
 
@@ -208,8 +216,9 @@ class CustomPromptEvolution(PromptEvolution):
         )  # take the first line and first sentence
         if self.config.debug:
             print(
-                f"\nGenerating answer:\n"
+                f"\n===========================\nGenerating answer:\n"
                 f"-- Old Question --\n{old_question}\n-- Old Answer --\n{old_answer}\n-- Input --\n{new_instruction}\n-- Output --\n{answer}\n"
+                f"===========================\n"
             )
         return answer
 
