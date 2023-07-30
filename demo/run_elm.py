@@ -282,13 +282,16 @@ def main(config):
     )
 
     print(
-        "Map: ",
+        "Map (only show the first 10 chars): ",
     )
     array = elm.qd_algorithm.genomes.array
 
     for i in range(array.shape[0]):
         for j in range(array.shape[1]):
-            print(str(array[i, j])[:10], end=" ")
+            if array[i, j] == 0.0:
+                print("   None   ", end=" ")
+            else:
+                print(str(array[i, j])[:10], end=" ")
         print()
 
 
