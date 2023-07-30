@@ -153,8 +153,8 @@ class CustomPromptEvolution(PromptEvolution):
         new_instruction_str = (
             result["text"].strip().split("\n")[0]
         )  # take the first line
-        # Strip the "Improved: " if any.
-        new_instruction_str = new_instruction_str.replace("Improved: ", "")
+        # Strip the "Improved: " and "</s>" if any.
+        new_instruction_str = new_instruction_str.replace("Improved: ", "").replace("</s>", "")
 
         # update the answer to the new question
         inputs = {
