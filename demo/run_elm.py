@@ -70,6 +70,8 @@ class HonkConfig(ELMConfig):
     qd: Any = MISSING
     env: Any = MISSING
     run_name: Optional[str] = None
+    batch_size: int = 1
+
 
 CONFIGSTORE.store(group="env", name="custom_env", node=CustomEnvConfig)
 CONFIGSTORE.store(group="model", name="custom_prompt", node=CustomModelConfig)
@@ -159,10 +161,12 @@ class CustomPromptEvolution(PromptEvolution):
     def fitness(self, x: PromptGenotype) -> float:
         # todo: complete this
         fitnesses = []
+        """
         eval_template = PromptTemplate(
             input_variables=["instruction_str"],
             template=self.task.evaluation_instruction,
         )
+        """
         input_str, output_str = "", ""
         """
         fitnesses.append(
