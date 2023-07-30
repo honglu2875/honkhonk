@@ -1,13 +1,12 @@
-from dataclasses import dataclass
 from typing import Any, Optional
 from omegaconf import MISSING
 
 import hydra
 from dataclasses import dataclass, field
+from transformers import pipeline
 
 import numpy as np
-from hydra.core.config_store import ConfigStore
-from langchain import PromptTemplate
+from langchain import PromptTemplate, LLMChain
 from omegaconf import OmegaConf
 from hydra.core.hydra_config import HydraConfig
 
@@ -15,7 +14,7 @@ from openelm import ELM
 from openelm.configs import defaults_elm, ELMConfig, MAPElitesConfig, PromptEnvConfig, \
     PromptModelConfig, CONFIGSTORE
 from openelm.elm import load_algorithm
-from openelm.environments.prompt.prompt import PromptEvolution, PromptGenotype
+from openelm.environments.prompt.prompt import PromptEvolution, PromptGenotype, get_sentiment_score
 from openelm.mutation_model import MutationModel, PromptModel
 
 
@@ -38,6 +37,8 @@ class CustomModelConfig(PromptModelConfig):
 class CustomMAPElitesConfig(MAPElitesConfig):
     qd_name: str = "mapelites"
     map_grid_size: tuple[int, ...] = (10,)
+    init_steps: int = 2
+    total_steps: int = 5
 
 
 defaults_elm = [
@@ -63,8 +64,6 @@ class HonkConfig(ELMConfig):
     env: Any = MISSING
     run_name: Optional[str] = None
     batch_size: int = 1
-    init_steps: int = 2
-    total_steps: int = 5
 
 
 CONFIGSTORE.store(group="env", name="custom_env", node=CustomEnvConfig)
@@ -111,6 +110,14 @@ class CustomPromptEvolution(PromptEvolution):
         self.base_prompt = PromptTemplate(
             template=self.task.base_template, input_variables=self.task.input_variables
         )
+        self.behavior_model = None
+        self.evaluation_model = pipeline(
+            "sentiment-analysis",
+            model="cardiffnlp/twitter-roberta-base-sentiment",
+            # model="distilbert-base-uncased-finetuned-sst-2-english",
+            top_k=None,
+            # return_all_scores=True,
+        )
 
     def random_prompt(self):
         inputs = {
@@ -143,7 +150,8 @@ class CustomPromptEvolution(PromptEvolution):
 
         inputs = {
             "instruction_str": new_instruction_str,
-            "example": self.task.create_example(new_instruction_str),
+            "example": self.task.create_example(new_instruction_str,
+                                                self.evaluate_string(new_instruction_str)),
         }
 
         return PromptGenotype(
@@ -153,33 +161,31 @@ class CustomPromptEvolution(PromptEvolution):
         )
 
     def fitness(self, x: PromptGenotype) -> float:
-        # todo: complete this
-        fitnesses = []
-        """
-        eval_template = PromptTemplate(
-            input_variables=["instruction_str"],
-            template=self.task.evaluation_instruction,
-        )
-        """
-        input_str, output_str = "", ""
-        """
-        fitnesses.append(
-            self.evaluate_template(
-                eval_template,
-                x.fixed_inputs["instruction_str"],
-                input_str,
-                output_str,
-            )
-        )
-        fitness = np.mean(fitnesses)
-        """
-        # todo: DO NOT FORGET, complete this!!!!!
-        fitness = np.random.random()
-        if self.config.debug:
-            print(
-                f"-- instruction_str --\n{x.fixed_inputs['instruction_str']}\n-- Fitness: {fitness} --\n-- Behavior: {x.to_phenotype()} --\n"
-            )
+        sentiment = self.evaluation_model(str(x.fixed_inputs["example"]))
+        fitness = -get_sentiment_score(sentiment[0], mode=self.evaluation_model.model.config.model_type)
+
         return fitness
+
+    def evaluate_string(self, new_instruction: str):
+        """
+        Use the generated new instruction to write an answer.
+        """
+        evaluate_prompt = PromptTemplate(
+            template=self.task.base_template, 
+            input_variables=self.task.input_variables
+        )
+        eval_chain = LLMChain(llm=self.mutation_model.model, prompt=evaluate_prompt)
+        result = eval_chain(
+            {
+                "instruction_str": new_instruction, 
+                "example": self.task.create_example(new_instruction),
+            }
+        )
+        if self.config.debug:
+             print(
+                 f"-- Template --\n{str(evaluate_prompt)}\n-- Input --\n{new_instruction}\n-- Output --\n{result['text']}\n"
+             )
+        return result['text']
 
 
 class CustomELM(ELM):
