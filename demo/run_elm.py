@@ -44,7 +44,7 @@ class CustomMAPElitesConfig(MAPElitesConfig):
     qd_name: str = "mapelites"
     map_grid_size: tuple[int, ...] = (10,)
     init_steps: int = 1
-    total_steps: int = 30
+    total_steps: int = 10
 
 
 defaults_elm = [
@@ -114,6 +114,7 @@ class CustomPromptEvolution(PromptEvolution):
         self.mutation_model = mutation_model
         self.response_model = response_model or self.mutation_model
 
+        self.behavior_model = None
         self.fitness_model = pipeline(
             "sentiment-analysis",
             model="cardiffnlp/twitter-roberta-base-sentiment",
@@ -121,7 +122,6 @@ class CustomPromptEvolution(PromptEvolution):
             top_k=None,
             # return_all_scores=True,
         )
-        self.behavior_model = self.fitness_model
 
         self.task_name = self.config.task_name
         self.genotype_ndim = 1
