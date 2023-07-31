@@ -183,10 +183,11 @@ class CustomPromptEvolution(PromptEvolution):
         self.rng = np.random.default_rng(self.config.seed)
 
     def random_prompt(self):
+        idx = np.random.choice(range(len(self.task.instruction_str)))
         inputs = {
-            "instruction_str": self.task.instruction_str,
-            "old_question": self.task.instruction_str,
-            "old_answer": self.task.target,
+            "instruction_str": self.task.instruction_str[idx],
+            "old_question": self.task.instruction_str[idx],
+            "old_answer": self.task.target[idx],
         }
         return PromptGenotype(
             prompt=self.base_prompt,
