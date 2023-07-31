@@ -122,12 +122,15 @@ def get_initial_prompts(model) -> tuple[list, list]:
         input_variables=["news_article"],
     )
     eval_chain = LLMChain(llm=model.model, prompt=evaluate_prompt)
-    result = eval_chain.apply([{"news_article": news_article} for _ in range(5)])
+    result = eval_chain.apply([{"news_article": news_article + " " * i} for i in range(5)])
     questions = [
             r["text"]
             .replace('"', "")
+            .replace('</s>', "")
             .lstrip("0123456789. \n")
             .split("\n")[0]
+            .split("?")[0]
+            + "?"
             for r in result
     ]
 
@@ -141,10 +144,15 @@ def get_initial_prompts(model) -> tuple[list, list]:
     answers = [
         r["text"]
         .replace('"', "")
+        .replace('</s>', "")
         .lstrip("0123456789. \n")
         .split("\n")[0]
         for r in qa_result
     ]
+
+    print("Generated questions:")
+    for q in questions:
+        print(q)
     return questions, answers
 
 
