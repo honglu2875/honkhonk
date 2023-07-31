@@ -256,7 +256,7 @@ class CustomPromptEvolution(PromptEvolution):
         # for the toxic-bert model
         for score in result[0]:
             if score["label"] == "toxic":
-                fitness = 1 - score["score"]
+                fitness = score["score"]
                 break
         if self.config.debug:
             print(
