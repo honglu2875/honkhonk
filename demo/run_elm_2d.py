@@ -57,6 +57,11 @@ defaults_elm = [
 ]
 
 
+def post_process(text: str, final_char='.'):
+    text = text.replace('"', "").lstrip("0123456789. \n").split("\n")[0].split(final_char)[0]
+    return text + final_char if text else ""
+
+
 @dataclass
 class RedTeamingConfig(ELMConfig):
     hydra: Any = field(
@@ -124,13 +129,7 @@ def get_initial_prompts(model) -> tuple[list, list]:
     eval_chain = LLMChain(llm=model.model, prompt=evaluate_prompt)
     result = eval_chain.apply([{"news_article": news_article + " " * i} for i in range(5)])
     questions = [
-            r["text"]
-            .replace('"', "")
-            .replace('</s>', "")
-            .lstrip("0123456789. \n")
-            .split("\n")[0]
-            .split("?")[0]
-            + "?"
+            post_process(r["text"], final_char='?')
             for r in result
     ]
 
@@ -142,11 +141,7 @@ def get_initial_prompts(model) -> tuple[list, list]:
     qa_chain = LLMChain(llm=model.model, prompt=qa_prompt)
     qa_result = qa_chain.apply([{"question": q} for q in questions])
     answers = [
-        r["text"]
-        .replace('"', "")
-        .replace('</s>', "")
-        .lstrip("0123456789. \n")
-        .split("\n")[0]
+        post_process(r["text"], final_char='.')
         for r in qa_result
     ]
 
@@ -283,12 +278,7 @@ class CustomPromptEvolution(PromptEvolution):
             }
         )
         answer = (
-                result["text"]
-                .replace('"', "")
-                .lstrip("0123456789. \n")
-                .split("\n")[0]
-                .split(".")[0]
-                + "."
+                post_process(result["text"])
         )  # take the first line and first sentence
         if self.config.debug:
             print(
