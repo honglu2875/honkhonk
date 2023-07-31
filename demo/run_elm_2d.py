@@ -36,7 +36,7 @@ class CustomModelConfig(PromptModelConfig):
 @dataclass
 class CustomResponseModelConfig(PromptModelConfig):
     model_name: str = "prompt"
-    model_path = "ehartford/WizardLM-7B-V1.0-Uncensored"
+    model_path: str = "ehartford/WizardLM-7B-V1.0-Uncensored"
 
 
 @dataclass
@@ -330,8 +330,7 @@ def main(config):
     print(OmegaConf.to_yaml(config))
     print("-----------------  End -----------------")
     config = OmegaConf.to_object(config)
-    print(config)
-    exit(0)
+
     elm = CustomELM(config, env=None)
 
     print(
