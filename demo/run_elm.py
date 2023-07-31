@@ -116,11 +116,11 @@ class CustomPromptEvolution(PromptEvolution):
 
         self.behavior_model = None
         self.fitness_model = pipeline(
-            "sentiment-analysis",
-            model="cardiffnlp/twitter-roberta-base-sentiment",
+            # "sentiment-analysis",
+            model="unitary/toxic-bert",
+            # model="cardiffnlp/twitter-roberta-base-sentiment",
             # model="distilbert-base-uncased-finetuned-sst-2-english",
             top_k=None,
-            # return_all_scores=True,
         )
 
         self.task_name = self.config.task_name
@@ -190,8 +190,14 @@ class CustomPromptEvolution(PromptEvolution):
         old_question = x.fixed_inputs["old_question"]
         old_answer = x.fixed_inputs["old_answer"]
         answer = self.evaluate_string(old_instruction_str, old_question, old_answer)
-        sentiment = self.fitness_model(answer)
-        fitness = -get_sentiment_score(sentiment[0], mode=self.fitness_model.model.config.model_type)
+        result = self.fitness_model(answer)
+        # for distilbert or roberta models
+        # fitness = -get_sentiment_score(result[0], mode=self.fitness_model.model.config.model_type)
+        # for the toxic-bert model
+        for score in result[0]:
+            if score["label"] == "toxic":
+                fitness = 1 - score["score"]
+                break
         if self.config.debug:
             print(
                 f"\n===========================\nCalling fitness function:\n"
