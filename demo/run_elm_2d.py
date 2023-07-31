@@ -121,7 +121,13 @@ class CustomPromptEvolution(PromptEvolution):
             # model="distilbert-base-uncased-finetuned-sst-2-english",
             top_k=None,
         )
-        self.behavior_model = self.fitness_model
+        self.behavior_model = pipeline(
+            "sentiment-analysis",
+            # model="unitary/toxic-bert",
+            model="cardiffnlp/twitter-roberta-base-sentiment",
+            # model="distilbert-base-uncased-finetuned-sst-2-english",
+            top_k=None,
+        )
 
         self.task_name = self.config.task_name
         self.genotype_ndim = 2
