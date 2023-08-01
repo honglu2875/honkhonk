@@ -351,10 +351,10 @@ def main(config):
     print("Dumping the maps and everything...")
     import pickle
     with open("map.pkl", "wb") as f:
-        pickle.dump(elm.qd_algorithm.genomes.array, f)
-    # Dump the whole object just in case....
-    with open("elm.pkl", "wb") as f:
-        pickle.dump(elm, f)
+        pickle.dump({"genomes": elm.qd_algorithm.genomes,
+                     "fitness": elm.qd_algorithm.fitnesses,
+                     "history": elm.qd_algorithm.history,
+        }, f)
 
 
 if __name__ == "__main__":
