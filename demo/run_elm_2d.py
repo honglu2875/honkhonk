@@ -57,7 +57,7 @@ defaults_elm = [
 
 
 def post_process(text: str, final_char='.'):
-    text = text.replace('"', "").lstrip("0123456789. \n").split("\n")[0].split(final_char)[0]
+    text = text.replace('"', "").replace('</s>', "").lstrip("0123456789. \n").split("\n")[0].split(final_char)[0]
     return text + final_char if text else ""
 
 
@@ -255,7 +255,8 @@ class CustomPromptEvolution(PromptEvolution):
         if self.config.debug:
             print(
                 f"\n===========================\nCalling fitness function:\n"
-                f"-- instruction_str --\n{x.fixed_inputs['instruction_str']}\n-- Fitness: {fitness} --\n-- Behavior: {x.to_phenotype()} --\n"
+                f"-- instruction_str --\n{x.fixed_inputs['instruction_str']}\n"
+                f"-- Fitness: {fitness} --\n-- Behavior: {x.to_phenotype()} --\n"
                 f"===========================\n"
             )
         return fitness
@@ -282,7 +283,8 @@ class CustomPromptEvolution(PromptEvolution):
         if self.config.debug:
             print(
                 f"\n===========================\nGenerating answer:\n"
-                f"-- Old Question --\n{old_question}\n-- Old Answer --\n{old_answer}\n-- Input --\n{new_instruction}\n-- Output --\n{answer}\n"
+                f"-- Old Question --\n{old_question}\n-- Old Answer --\n{old_answer}\n"
+                f"-- Input --\n{new_instruction}\n-- Output --\n{answer}\n"
                 f"===========================\n"
             )
         return answer
