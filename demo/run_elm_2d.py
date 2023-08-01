@@ -42,8 +42,7 @@ class CustomResponseModelConfig(PromptModelConfig):
 @dataclass
 class CustomMAPElitesConfig(MAPElitesConfig):
     qd_name: str = "mapelites"
-    map_grid_size: tuple[int, ...] = (
-    10,)  # dim of map_grid_size is somehow multiplied to behavior_ndim... not sure why... Therefore, even if we have a 2d map, we have to specify a 1d tuple here
+    map_grid_size: tuple[int, ...] = (100,)  # dim of map_grid_size is somehow multiplied to behavior_ndim... not sure why... Therefore, even if we have a 2d map, we have to specify a 1d tuple here
     init_steps: int = 1
     total_steps: int = 5
 
@@ -348,6 +347,14 @@ def main(config):
             else:
                 print(str(array[i, j])[:10], end=" ")
         print()
+
+    print("Dumping the maps and everything...")
+    import pickle
+    with open("map.pkl", "wb") as f:
+        pickle.dump(elm.qd_algorithm.genomes.array, f)
+    # Dump the whole object just in case....
+    with open("elm.pkl", "wb") as f:
+        pickle.dump(elm, f)
 
 
 if __name__ == "__main__":
