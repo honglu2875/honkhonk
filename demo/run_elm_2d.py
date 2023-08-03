@@ -229,7 +229,7 @@ class CustomPromptEvolution(PromptEvolution):
 
     def random_prompt(self):
         idx = np.random.choice(range(len(self.task.instruction_str)))
-        question, answer = get_initial_prompts(self.mutation_model)
+        question = get_initial_prompts(self.mutation_model)
         if "old_question" not in self.task.input_variables or "old_answer" not in self.task.input_variables:
             inputs = {
                 "instruction_str": question,
