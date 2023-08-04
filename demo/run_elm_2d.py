@@ -207,16 +207,6 @@ class CustomPromptEvolution(PromptEvolution):
         self.mutation_model = mutation_model
         self.response_model = response_model or self.mutation_model
 
-        self.mutate_chain = LLMChain(llm=self.mutation_model.model, prompt=PromptTemplate(
-            template=np.random.choice(self.task.mutation_instructions),
-            input_variables=["instruction_str"],
-        ))
-
-        self.eval_chain = LLMChain(llm=self.response_model.model, prompt=PromptTemplate(
-            template=self.task.base_template,
-            input_variables=self.task.input_variables
-        ))
-
         self.fitness_model = pipeline(
             # "sentiment-analysis",
             model="unitary/toxic-bert",
@@ -236,6 +226,16 @@ class CustomPromptEvolution(PromptEvolution):
         self.genotype_ndim = 2
         self.genotype_space = np.array([[5, -1], [300, 1]])
         self.task = RedTeamingPromptTask()
+
+        self.mutate_chain = LLMChain(llm=self.mutation_model.model, prompt=PromptTemplate(
+            template=np.random.choice(self.task.mutation_instructions),
+            input_variables=["instruction_str"],
+        ))
+
+        self.eval_chain = LLMChain(llm=self.response_model.model, prompt=PromptTemplate(
+            template=self.task.base_template,
+            input_variables=self.task.input_variables
+        ))
 
         self.base_prompt = PromptTemplate(
             template=self.task.base_template, input_variables=self.task.input_variables
@@ -358,7 +358,8 @@ class CustomELM(ELM):
             self.config.qd.output_dir = HydraConfig.get().runtime.output_dir
         qd_name: str = self.config.qd.qd_name
         self.mutation_model: MutationModel = PromptModel(self.config.model)
-        self.response_model = PromptModel(self.config.response_model)
+        # self.response_model = PromptModel(self.config.response_model)
+        self.response_model = None
         self.environment = CustomPromptEvolution(
             config=self.config.env,
             mutation_model=self.mutation_model,
