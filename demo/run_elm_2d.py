@@ -13,7 +13,7 @@ from openelm.elm import load_algorithm
 from openelm.environments.prompt.prompt import PromptEvolution, PromptGenotype
 from openelm.mutation_model import MutationModel, PromptModel
 
-from demo.config import CustomEnvConfig, CensoredModelConfig, UncensoredModelConfig, CustomMAPElitesConfig, \
+from config import CustomEnvConfig, CensoredModelConfig, UncensoredModelConfig, CustomMAPElitesConfig, \
     RedTeamingConfig, RedTeamingPromptTask, _news_article
 
 
