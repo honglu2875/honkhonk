@@ -71,11 +71,7 @@ def get_initial_prompts(model) -> str:
         input_variables=["news_article"],
     )
     eval_chain = MyLLMChain(llm=model.model, prompt=evaluate_prompt)
-
-    n = eval_chain.llm.config.num_return_sequences
-    eval_chain.llm.config.num_return_sequences = 1
     question = apply_chain_with_retry(eval_chain, {"news_article": _news_article}, retries=5)
-    eval_chain.llm.config.num_return_sequences = n
 
     return question
 
@@ -187,8 +183,11 @@ class CustomPromptEvolution(PromptEvolution):
         """
         input_dict = {"instruction_str": new_instruction}
 
-        # todo: fix it for multiple evals
-        answer = apply_chain_with_retry(self.eval_chain, input_dict, retries=5)[0]
+        # Stupid monkey patch to change the number of generations... God I hate LangChain.
+        n = self.eval_chain.llm.config.num_return_sequences
+        self.eval_chain.llm.config.num_return_sequences = 1
+        answer = next(apply_chain_with_retry(self.eval_chain, input_dict, retries=5))
+        self.eval_chain.llm.config.num_return_sequences = n
 
         if self.config.debug:
             print(
