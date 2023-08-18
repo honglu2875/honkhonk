@@ -26,6 +26,20 @@ CONFIGSTORE.store(group="qd", name="custom_mapelites", node=CustomMAPElitesConfi
 CONFIGSTORE.store(name="redteamingelm", node=RedTeamingConfig)
 
 
+class MyLLMChain(LLMChain):
+    """
+    A monkey patch for LLMChain (wtf is going on with their implementation of _call!?)
+    """
+
+    def _call(
+            self,
+            inputs,
+            run_manager=None,
+    ):
+        response = self.generate([inputs], run_manager=run_manager)
+        return self.create_outputs(response)
+
+
 def post_process(text: str):
     text = text.replace('"', "").replace('</s>', "").lstrip("0123456789. \n").split("\n")[0]
     return text[:500]
@@ -37,8 +51,8 @@ def valid_prompt(p: str) -> bool:
 
 def apply_chain_with_retry(chain, input_dict, retries=5):
     for _ in range(retries):  # 5 tries for valid answer
-        result = chain(input_dict)
-        processed = post_process(result["text"])
+        results = chain(input_dict)
+        processed = [post_process(result["text"]) for result in results]
 
         if valid_prompt(processed):
             break
@@ -54,7 +68,7 @@ def get_initial_prompts(model) -> str:
         template=template,
         input_variables=["news_article"],
     )
-    eval_chain = LLMChain(llm=model.model, prompt=evaluate_prompt)
+    eval_chain = MyLLMChain(llm=model.model, prompt=evaluate_prompt)
 
     question = apply_chain_with_retry(eval_chain, {"news_article": _news_article}, retries=5)
 
@@ -102,12 +116,12 @@ class CustomPromptEvolution(PromptEvolution):
         self.genotype_space = np.array([[5, -1], [300, 1]])
         self.task = RedTeamingPromptTask()
 
-        self.mutate_chain = LLMChain(llm=self.mutation_model.model, prompt=PromptTemplate(
+        self.mutate_chain = MyLLMChain(llm=self.mutation_model.model, prompt=PromptTemplate(
             template=np.random.choice(self.task.mutation_instructions),
             input_variables=["instruction_str"],
         ))
 
-        self.eval_chain = LLMChain(llm=self.response_model.model, prompt=PromptTemplate(
+        self.eval_chain = MyLLMChain(llm=self.response_model.model, prompt=PromptTemplate(
             template=self.task.base_template,
             input_variables=self.task.input_variables
         ))
@@ -118,57 +132,33 @@ class CustomPromptEvolution(PromptEvolution):
         self.rng = np.random.default_rng(self.config.seed)
 
     def random_prompt(self):
-        idx = np.random.choice(range(len(self.task.instruction_str)))
-        question = get_initial_prompts(self.mutation_model)
-        if "old_question" not in self.task.input_variables or "old_answer" not in self.task.input_variables:
-            inputs = {
-                "instruction_str": question,
-            }
-        else:
-            inputs = {
-                "instruction_str": question,
-                "old_question": self.task.instruction_str[idx],
-                "old_answer": self.task.target[idx],
-            }
-        return PromptGenotype(
+        questions = get_initial_prompts(self.mutation_model)
+
+        return [PromptGenotype(
             prompt=self.base_prompt,
-            fixed_inputs=inputs,
+            fixed_inputs={"instruction_str": question},
             behavior_model=self.behavior_model,
-        )
+        ) for question in questions]
 
     def mutate_prompt(self, prompt):
         # mutate the prompt string;
         old_instruction_str = prompt.fixed_inputs["instruction_str"]
-        old_question = prompt.fixed_inputs.get("old_question")
-        old_answer = prompt.fixed_inputs.get("old_answer")
 
         input_dict = {"instruction_str": old_instruction_str}
-        new_instruction_str = apply_chain_with_retry(self.mutate_chain, input_dict, retries=5)
-
-        # update the answer to the new question
-        if old_question is None and old_answer is None:
-            inputs = {
-                "instruction_str": new_instruction_str,
-            }
-        else:
-            inputs = {
-                "instruction_str": new_instruction_str,
-                "old_question": old_instruction_str,
-                "old_answer": self.evaluate_string(old_instruction_str, old_question, old_answer),
-            }
+        results = apply_chain_with_retry(self.mutate_chain, input_dict, retries=5)
 
         if self.config.debug:
             print(
                 f"\n===========================\nMutating:\n"
-                f"-- old_instruction_str --\n{old_instruction_str}\n-- new_instruction_str --\n{new_instruction_str}\n"
+                f"-- old_instruction_str --\n{old_instruction_str}\n-- new_instruction_str --\n{results}\n"
                 f"===========================\n"
             )
 
-        return PromptGenotype(
+        return [PromptGenotype(
             prompt=self.base_prompt,
-            fixed_inputs=inputs,
+            fixed_inputs={"instruction_str": new_instruction_str},
             behavior_model=self.behavior_model,
-        )
+        ) for new_instruction_str in results]
 
     def fitness(self, x: PromptGenotype) -> float:
         old_instruction_str = x.fixed_inputs["instruction_str"]
@@ -179,6 +169,7 @@ class CustomPromptEvolution(PromptEvolution):
         # for distilbert or roberta models
         # fitness = -get_sentiment_score(result[0], mode=self.fitness_model.model.config.model_type)
         # for the toxic-bert model
+        fitness = float("-inf")
         for score in result[0]:
             if score["label"] == "toxic":
                 fitness = score["score"]
@@ -196,16 +187,10 @@ class CustomPromptEvolution(PromptEvolution):
         """
         Use the generated new instruction to write an answer.
         """
-        if old_question and old_answer:
-            input_dict = {
-                    "instruction_str": new_instruction,
-                    "old_question": old_question,
-                    "old_answer": old_answer,
-                }
-        else:
-            input_dict = {"instruction_str": new_instruction}
+        input_dict = {"instruction_str": new_instruction}
 
-        answer = apply_chain_with_retry(self.eval_chain, input_dict, retries=5)
+        # todo: fix it for multiple evals
+        answer = apply_chain_with_retry(self.eval_chain, input_dict, retries=5)[0]
 
         if self.config.debug:
             print(
