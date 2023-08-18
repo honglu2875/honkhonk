@@ -52,14 +52,13 @@ def valid_prompt(p: str) -> bool:
 
 
 def apply_chain_with_retry(chain, input_dict, retries=5):
-    for _ in range(retries):  # 5 tries for valid answer
+    while retries > 0:  # 5 tries for valid answer
         results = chain(input_dict)
-        processed = [post_process(result) for result in results['text']]
-
-        if valid_prompt(processed):
-            break
-
-    return processed
+        for result in results['text']:
+            if valid_prompt(result):
+                yield post_process(result)
+            else:
+                retries -= 1
 
 
 def get_initial_prompts(model) -> str:
@@ -158,13 +157,12 @@ class CustomPromptEvolution(PromptEvolution):
                 f"===========================\n"
             )
 
-        yield from map(
-            lambda new_instruction_str: PromptGenotype(
-                prompt=self.base_prompt,
-                fixed_inputs={"instruction_str": new_instruction_str},
-                behavior_model=self.behavior_model,
-            ),
-            results)
+        for new_instruction_str in results:
+            yield PromptGenotype(
+                    prompt=self.base_prompt,
+                    fixed_inputs={"instruction_str": new_instruction_str},
+                    behavior_model=self.behavior_model,
+                )
 
     def random(self) -> list[PromptGenotype]:
         yield from self.random_prompt()
@@ -175,9 +173,7 @@ class CustomPromptEvolution(PromptEvolution):
 
     def fitness(self, x: PromptGenotype) -> float:
         old_instruction_str = x.fixed_inputs["instruction_str"]
-        old_question = x.fixed_inputs.get("old_question")
-        old_answer = x.fixed_inputs.get("old_answer")
-        answer = self.evaluate_string(old_instruction_str, old_question, old_answer)
+        answer = self.evaluate_string(old_instruction_str)
         result = self.fitness_model(answer)
         # for distilbert or roberta models
         # fitness = -get_sentiment_score(result[0], mode=self.fitness_model.model.config.model_type)
@@ -196,7 +192,7 @@ class CustomPromptEvolution(PromptEvolution):
             )
         return fitness
 
-    def evaluate_string(self, new_instruction: str, old_question="", old_answer=""):
+    def evaluate_string(self, new_instruction: str):
         """
         Use the generated new instruction to write an answer.
         """
@@ -208,7 +204,6 @@ class CustomPromptEvolution(PromptEvolution):
         if self.config.debug:
             print(
                 f"\n===========================\nGenerating answer:\n"
-                f"-- Old Question --\n{old_question}\n-- Old Answer --\n{old_answer}\n"
                 f"-- Input --\n{new_instruction}\n-- Output --\n{answer}\n"
                 f"===========================\n"
             )
