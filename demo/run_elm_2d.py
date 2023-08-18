@@ -53,7 +53,7 @@ def valid_prompt(p: str) -> bool:
 def apply_chain_with_retry(chain, input_dict, retries=5):
     for _ in range(retries):  # 5 tries for valid answer
         results = chain(input_dict)
-        processed = [post_process(result["text"]) for result in results]
+        processed = [post_process(result) for result in results['text']]
 
         if valid_prompt(processed):
             break

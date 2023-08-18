@@ -37,6 +37,7 @@ class UncensoredModelConfig(PromptModelConfig):
     model_name: str = "prompt"
     #model_path: str = "ehartford/WizardLM-7B-V1.0-Uncensored"
     model_path: str = "ehartford/WizardLM-13B-Uncensored"
+    num_return_sequences: int = 1
 
 
 @dataclass
