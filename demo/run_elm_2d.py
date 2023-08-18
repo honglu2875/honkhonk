@@ -81,12 +81,12 @@ def get_initial_prompts(init_model, num_generation=1) -> str:
 
 
 class CustomPromptEvolution(PromptEvolution):
-    def __init__(self, config):
+    def __init__(self, config, model_cfg=None):
         self.config: PromptEnvConfig = config
         self.batch_size = self.config.batch_size
 
-        self.mutation_model = GenerationModel(
-            self.config.model.model_path,
+        self.init_model = GenerationModel(
+            model_cfg.model_path,
             model_kwargs=None,
         )
         self.init_model = self.mutation_model
@@ -217,6 +217,10 @@ class CustomELM(ELM):
         # self.response_model = None
         self.environment = CustomPromptEvolution(
             config=self.config.env,
+            model_cfg=self.config.model,
+            # init_model_cfg=self.config.model,
+            # mutation_model_cfg=self.config.model,
+            # response_model_cfg=self.config.response_model,
             # mutation_model=self.mutation_model,
             # response_model=self.response_model,
         )
