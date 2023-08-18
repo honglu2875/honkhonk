@@ -21,7 +21,10 @@ class GenerationModel:
 
     def generate(self, prompt: str, input_dict: dict, num_generation: int = 1, **generation_kwargs):
         prompt = prompt.format(**input_dict)
-        generated = self.model(prompt, **generation_kwargs, num_return_sequences=num_generation)
+        generated = self.model(prompt,
+                               **generation_kwargs,
+                               num_return_sequences=num_generation,
+                               return_full_text=False)
         return [g["generated_text"] for g in generated]
 
     def __call__(self, *args, **kwargs):
