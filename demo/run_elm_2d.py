@@ -89,8 +89,8 @@ class CustomPromptEvolution(PromptEvolution):
             model_cfg.model_path,
             model_kwargs=None,
         )
-        self.init_model = self.mutation_model
-        self.response_model = self.mutation_model
+        self.mutation_model = self.init_model
+        self.response_model = self.init_model
 
         self.fitness_model = pipeline(
             # "sentiment-analysis",
