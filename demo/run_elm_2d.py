@@ -61,7 +61,7 @@ def apply_chain_with_retry(chain, input_dict, retries=5):
     count = 0
     while chain.llm.config.num_return_sequences - count > 0 and retries > 0:  # 5 tries for valid answer
         results = chain.apply(input_dict)
-        lst = results['text'] if isinstance(result, dict) else [r['text'] for r in results]
+        lst = [r['text'] for r in results]
         print("Generation results:", lst)
         for result in lst:
             if valid_prompt(result):
