@@ -24,6 +24,7 @@ class CustomEnvConfig(PromptEnvConfig):
     evals_per_prompt: int = 10
     debug: bool = True
     batch_size: int = 1
+    max_len: int = 1024
 
 
 @dataclass

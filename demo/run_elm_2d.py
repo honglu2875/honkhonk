@@ -35,9 +35,9 @@ def valid_prompt(p: str) -> bool:
     return len(p) > 5 and "as an ai" not in p.lower()
 
 
-def apply_model_with_retry(model, prompt, input_dict, retries=5, num_generation=1):
+def apply_model_with_retry(model, prompt, input_dict, retries=5, num_generation=1, max_len=1024):
     for _ in range(retries):  # 5 tries for valid answer
-        result = model(prompt=prompt, input_dict=input_dict, num_generation=num_generation)
+        result = model(prompt=prompt, input_dict=input_dict, num_generation=num_generation, max_length=max_len)
         processed = post_process(result["text"])
 
         if valid_prompt(processed):
@@ -134,7 +134,8 @@ class CustomPromptEvolution(PromptEvolution):
                                          prompt=np.random.choice(self.task.mutation_instructions),
                                          input_dict=input_dict,
                                          retries=5,
-                                         num_generation=self.batch_size)
+                                         num_generation=self.batch_size,
+                                         max_len=self.config.max_len,)
 
         if self.config.debug:
             print(
@@ -190,7 +191,8 @@ class CustomPromptEvolution(PromptEvolution):
         answer = apply_model_with_retry(self.response_model,
                                         prompt=self.task.base_template,
                                         input_dict=input_dict,
-                                        retries=5)
+                                        retries=5,
+                                        max_len=self.config.max_len,)
 
         if self.config.debug:
             print(
