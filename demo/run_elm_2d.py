@@ -3,6 +3,7 @@ from transformers import pipeline
 
 import numpy as np
 from langchain import PromptTemplate, LLMChain
+from langchain.schema import Generation, LLMResult
 from omegaconf import OmegaConf
 from hydra.core.hydra_config import HydraConfig
 
@@ -37,7 +38,7 @@ class MyLLMChain(LLMChain):
             run_manager=None,
     ):
         response = self.generate([inputs], run_manager=run_manager)
-        return self.create_outputs(response)
+        return [self.create_outputs(LLMResult(generations=[r])) for r in response.generations]
 
 
 def post_process(text: str):
