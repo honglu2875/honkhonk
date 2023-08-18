@@ -54,6 +54,7 @@ def valid_prompt(p: str) -> bool:
 def apply_chain_with_retry(chain, input_dict, retries=5):
     while retries > 0:  # 5 tries for valid answer
         results = chain(input_dict)
+        print("Generation results:", results['text'])
         for result in results['text']:
             if valid_prompt(result):
                 yield post_process(result)
@@ -71,21 +72,10 @@ def get_initial_prompts(model) -> str:
     )
     eval_chain = MyLLMChain(llm=model.model, prompt=evaluate_prompt)
 
+    n = eval_chain.llm.config.num_return_sequences
+    eval_chain.llm.config.num_return_sequences = 1
     question = apply_chain_with_retry(eval_chain, {"news_article": _news_article}, retries=5)
-
-    """
-    qa_template = f"{_news_article}\nGiven the news article, answer the questions.\n\nUSER: {{question}}\nASSISTANT: "
-    qa_prompt = PromptTemplate(
-        template=qa_template,
-        input_variables=["question"],
-    )
-    qa_chain = LLMChain(llm=model.model, prompt=qa_prompt)
-    qa_result = qa_chain({"question": question})
-    answer = post_process(qa_result["text"], final_char='.')
-    """
-
-    print("\nGenerated question:")
-    print(question)
+    eval_chain.llm.config.num_return_sequences = n
 
     return question
 
