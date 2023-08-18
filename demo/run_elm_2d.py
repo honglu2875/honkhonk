@@ -37,11 +37,8 @@ def valid_prompt(p: str) -> bool:
 
 def apply_model_with_retry(model, prompt, input_dict, retries=5, num_generation=1, max_len=1024):
     for _ in range(retries):  # 5 tries for valid answer
-        result = model(prompt=prompt, input_dict=input_dict, num_generation=num_generation, max_length=max_len)
-        processed = post_process(result["text"])
-
-        if valid_prompt(processed):
-            break
+        results = model(prompt=prompt, input_dict=input_dict, num_generation=num_generation, max_length=max_len)
+        processed = [post_process(result) for result in results and valid_prompt(result)]
 
     return processed
 
@@ -192,7 +189,8 @@ class CustomPromptEvolution(PromptEvolution):
                                         prompt=self.task.base_template,
                                         input_dict=input_dict,
                                         retries=5,
-                                        max_len=self.config.max_len,)
+                                        num_generation=1,
+                                        max_len=self.config.max_len,)[0]
 
         if self.config.debug:
             print(
