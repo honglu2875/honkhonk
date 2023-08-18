@@ -39,7 +39,8 @@ class MyLLMChain(LLMChain):
             run_manager=None,
     ):
         response = self.generate([inputs], run_manager=run_manager)
-        return {'text': [r['text'] for r in self.create_outputs(response)]}
+        #return {'text': [r['text'] for r in self.create_outputs(response)]}
+        return {'text': [r.text for r in response.generations[0]]}
 
 
 def post_process(text: str):
@@ -52,11 +53,13 @@ def valid_prompt(p: str) -> bool:
 
 
 def apply_chain_with_retry(chain, input_dict, retries=5):
-    while retries > 0:  # 5 tries for valid answer
+    count = 0
+    while chain.llm.config.num_return_sequences - count > 0 and retries > 0:  # 5 tries for valid answer
         results = chain(input_dict)
         print("Generation results:", results['text'])
         for result in results['text']:
             if valid_prompt(result):
+                count += 1
                 yield post_process(result)
             else:
                 retries -= 1
