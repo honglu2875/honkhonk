@@ -19,7 +19,6 @@ from openelm.mutation_model import MutationModel, PromptModel
 from config import CustomEnvConfig, CensoredModelConfig, UncensoredModelConfig, CustomMAPElitesConfig, \
     RedTeamingConfig, RedTeamingPromptTask, _news_article
 
-
 CONFIGSTORE.store(group="env", name="custom_env", node=CustomEnvConfig)
 CONFIGSTORE.store(group="model", name="censored", node=CensoredModelConfig)
 CONFIGSTORE.store(group="model", name="uncensored", node=UncensoredModelConfig)
@@ -137,11 +136,13 @@ class CustomPromptEvolution(PromptEvolution):
     def random_prompt(self):
         questions = get_initial_prompts(self.mutation_model)
 
-        return [PromptGenotype(
-            prompt=self.base_prompt,
-            fixed_inputs={"instruction_str": question},
-            behavior_model=self.behavior_model,
-        ) for question in questions]
+        yield from map(
+            lambda question: PromptGenotype(
+                prompt=self.base_prompt,
+                fixed_inputs={"instruction_str": question},
+                behavior_model=self.behavior_model,
+            ),
+            questions)
 
     def mutate_prompt(self, prompt):
         # mutate the prompt string;
@@ -157,11 +158,13 @@ class CustomPromptEvolution(PromptEvolution):
                 f"===========================\n"
             )
 
-        return [PromptGenotype(
-            prompt=self.base_prompt,
-            fixed_inputs={"instruction_str": new_instruction_str},
-            behavior_model=self.behavior_model,
-        ) for new_instruction_str in results]
+        yield from map(
+            lambda new_instruction_str: PromptGenotype(
+                prompt=self.base_prompt,
+                fixed_inputs={"instruction_str": new_instruction_str},
+                behavior_model=self.behavior_model,
+            ),
+            results)
 
     def random(self) -> list[PromptGenotype]:
         yield from self.random_prompt()
@@ -280,7 +283,7 @@ def main(config):
         pickle.dump({"genomes": elm.qd_algorithm.genomes,
                      "fitness": elm.qd_algorithm.fitnesses,
                      "history": elm.qd_algorithm.history,
-        }, f)
+                     }, f)
 
 
 if __name__ == "__main__":
