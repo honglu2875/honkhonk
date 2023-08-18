@@ -38,7 +38,7 @@ def valid_prompt(p: str) -> bool:
 def apply_model_with_retry(model, prompt, input_dict, retries=5, num_generation=1, max_len=1024):
     for _ in range(retries):  # 5 tries for valid answer
         results = model(prompt=prompt, input_dict=input_dict, num_generation=num_generation, max_length=max_len)
-        processed = [post_process(result) for result in results and valid_prompt(result)]
+        processed = [post_process(result) for result in results if valid_prompt(result)]
 
     return processed
 
