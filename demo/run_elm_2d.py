@@ -1,3 +1,5 @@
+import itertools
+
 import hydra
 from transformers import pipeline
 
@@ -160,6 +162,12 @@ class CustomPromptEvolution(PromptEvolution):
             fixed_inputs={"instruction_str": new_instruction_str},
             behavior_model=self.behavior_model,
         ) for new_instruction_str in results]
+
+    def random(self) -> list[PromptGenotype]:
+        yield from self.random_prompt()
+
+    def mutate(self, genomes: list[PromptGenotype]) -> list[PromptGenotype]:
+        yield from map(self.mutate_prompt, genomes)
 
     def fitness(self, x: PromptGenotype) -> float:
         old_instruction_str = x.fixed_inputs["instruction_str"]
