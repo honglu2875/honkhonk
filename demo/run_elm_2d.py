@@ -38,7 +38,7 @@ class MyLLMChain(LLMChain):
             run_manager=None,
     ):
         response = self.generate([inputs], run_manager=run_manager)
-        return [self.create_outputs(LLMResult(generations=[r])) for r in response.generations]
+        return [self.create_outputs(LLMResult(generations=r)) for r in response.generations]
 
 
 def post_process(text: str):
