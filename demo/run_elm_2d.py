@@ -144,9 +144,9 @@ class CustomPromptEvolution(PromptEvolution):
             ),
             questions)
 
-    def mutate_prompt(self, prompt):
+    def mutate_prompt(self, genome):
         # mutate the prompt string;
-        old_instruction_str = prompt.fixed_inputs["instruction_str"]
+        old_instruction_str = genome.fixed_inputs["instruction_str"]
 
         input_dict = {"instruction_str": old_instruction_str}
         results = apply_chain_with_retry(self.mutate_chain, input_dict, retries=5)
@@ -170,7 +170,8 @@ class CustomPromptEvolution(PromptEvolution):
         yield from self.random_prompt()
 
     def mutate(self, genomes: list[PromptGenotype]) -> list[PromptGenotype]:
-        yield from map(self.mutate_prompt, genomes)
+        for genome in genomes:
+            yield from self.mutate_prompt(genome)
 
     def fitness(self, x: PromptGenotype) -> float:
         old_instruction_str = x.fixed_inputs["instruction_str"]
