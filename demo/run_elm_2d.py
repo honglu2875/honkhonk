@@ -39,8 +39,13 @@ class MyLLMChain(LLMChain):
             run_manager=None,
     ):
         response = self.generate([inputs], run_manager=run_manager)
-        #return {'text': [r['text'] for r in self.create_outputs(response)]}
         return {'text': [r.text for r in response.generations[0]]}
+
+
+class MyPromptGenotype(PromptGenotype):
+    def __init__(self, *args, **kwargs):
+        super(MyPromptGenotype, self).__init__(*args, **kwargs)
+        self.answer = kwargs.get("answer", "")
 
 
 def post_process(text: str):
@@ -55,9 +60,10 @@ def valid_prompt(p: str) -> bool:
 def apply_chain_with_retry(chain, input_dict, retries=5):
     count = 0
     while chain.llm.config.num_return_sequences - count > 0 and retries > 0:  # 5 tries for valid answer
-        results = chain(input_dict)
-        print("Generation results:", results['text'])
-        for result in results['text']:
+        results = chain.apply(input_dict)
+        lst = results['text'] if isinstance(result, dict) else [r['text'] for r in results]
+        print("Generation results:", lst)
+        for result in lst:
             if valid_prompt(result):
                 count += 1
                 yield post_process(result)
@@ -122,13 +128,14 @@ class CustomPromptEvolution(PromptEvolution):
         self.rng = np.random.default_rng(self.config.seed)
 
     def random_prompt(self):
-        questions = get_initial_prompts(self.mutation_model)
-
-        for question in questions:
-            yield PromptGenotype(
+        questions = list(get_initial_prompts(self.mutation_model))
+        answers = self.evaluate_string(questions)
+        for question, answer in zip(questions, answers):
+            yield MyPromptGenotype(
                     prompt=self.base_prompt,
                     fixed_inputs={"instruction_str": question},
                     behavior_model=self.behavior_model,
+                    answer=answer
                 )
 
     def mutate_prompt(self, genome):
@@ -137,7 +144,7 @@ class CustomPromptEvolution(PromptEvolution):
 
         input_dict = {"instruction_str": old_instruction_str}
         results = apply_chain_with_retry(self.mutate_chain, input_dict, retries=5)
-
+        answers = self.evaluate_string(results)
         if self.config.debug:
             print(
                 f"\n===========================\nMutating:\n"
@@ -145,11 +152,12 @@ class CustomPromptEvolution(PromptEvolution):
                 f"===========================\n"
             )
 
-        for new_instruction_str in results:
-            yield PromptGenotype(
+        for new_instruction_str, answer in zip(results, answers):
+            yield MyPromptGenotype(
                     prompt=self.base_prompt,
                     fixed_inputs={"instruction_str": new_instruction_str},
                     behavior_model=self.behavior_model,
+                    answer=answer
                 )
 
     def random(self) -> list[PromptGenotype]:
@@ -161,7 +169,12 @@ class CustomPromptEvolution(PromptEvolution):
 
     def fitness(self, x: PromptGenotype) -> float:
         old_instruction_str = x.fixed_inputs["instruction_str"]
-        answer = self.evaluate_string(old_instruction_str)
+        if not hasattr(x, "answer") or getattr(x, "answer", None) is None:
+            answer = self.evaluate_string(old_instruction_str)[0]
+            setattr(x, "answer", answer)
+        else:
+            answer = x.answer
+
         result = self.fitness_model(answer)
         # for distilbert or roberta models
         # fitness = -get_sentiment_score(result[0], mode=self.fitness_model.model.config.model_type)
@@ -180,25 +193,25 @@ class CustomPromptEvolution(PromptEvolution):
             )
         return fitness
 
-    def evaluate_string(self, new_instruction: str):
+    def evaluate_string(self, new_instructions: list[str]):
         """
         Use the generated new instruction to write an answer.
         """
-        input_dict = {"instruction_str": new_instruction}
+        input_dict = [{"instruction_str": instruction} for instruction in new_instructions]
 
         # Stupid monkey patch to change the number of generations... God I hate LangChain.
         n = self.eval_chain.llm.config.num_return_sequences
         self.eval_chain.llm.config.num_return_sequences = 1
-        answer = next(apply_chain_with_retry(self.eval_chain, input_dict, retries=5))
+        answers = list(apply_chain_with_retry(self.eval_chain, input_dict, retries=5))
         self.eval_chain.llm.config.num_return_sequences = n
 
         if self.config.debug:
             print(
                 f"\n===========================\nGenerating answer:\n"
-                f"-- Input --\n{new_instruction}\n-- Output --\n{answer}\n"
+                f"-- Input --\n{new_instructions}\n-- Output --\n{answers}\n"
                 f"===========================\n"
             )
-        return answer
+        return answers
 
 
 class CustomELM(ELM):
