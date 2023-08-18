@@ -135,13 +135,12 @@ class CustomPromptEvolution(PromptEvolution):
     def random_prompt(self):
         questions = get_initial_prompts(self.mutation_model)
 
-        yield from map(
-            lambda question: PromptGenotype(
-                prompt=self.base_prompt,
-                fixed_inputs={"instruction_str": question},
-                behavior_model=self.behavior_model,
-            ),
-            questions)
+        for question in questions:
+            yield PromptGenotype(
+                    prompt=self.base_prompt,
+                    fixed_inputs={"instruction_str": question},
+                    behavior_model=self.behavior_model,
+                )
 
     def mutate_prompt(self, genome):
         # mutate the prompt string;
