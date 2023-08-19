@@ -150,7 +150,7 @@ class CustomPromptEvolution(PromptEvolution):
         old_instruction_str = genome.fixed_inputs["instruction_str"]
 
         input_dict = {"instruction_str": old_instruction_str}
-        results = apply_chain_with_retry(self.mutate_chain, input_dict, retries=5)
+        results = list(apply_chain_with_retry(self.mutate_chain, input_dict, retries=5))
         answers = self.evaluate_string(results)
         if self.config.debug:
             print(
