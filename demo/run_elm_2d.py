@@ -8,7 +8,7 @@ from langchain import PromptTemplate, LLMChain
 from langchain.schema import Generation, LLMResult
 from omegaconf import OmegaConf
 from hydra.core.hydra_config import HydraConfig
-
+from dataclasses import fields
 from openelm import ELM
 from openelm.configs import PromptEnvConfig, \
     CONFIGSTORE
@@ -44,8 +44,9 @@ class MyLLMChain(LLMChain):
 
 class MyPromptGenotype(PromptGenotype):
     def __init__(self, *args, **kwargs):
-        data_class_kwargs = {k: kwargs.get(k) for k in self.__dict__.keys()}
-        super(MyPromptGenotype, self).__init__(*args, **data_class_kwargs)
+        _fields = ['prompt', 'fixed_inputs', 'behavior_model']
+        class_kwargs = {k: kwargs.get(k) for k in _fields}
+        super(MyPromptGenotype, self).__init__(*args, **class_kwargs)
         self.answer = kwargs.get("answer", "")
 
 
