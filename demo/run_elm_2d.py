@@ -44,7 +44,8 @@ class MyLLMChain(LLMChain):
 
 class MyPromptGenotype(PromptGenotype):
     def __init__(self, *args, **kwargs):
-        super(MyPromptGenotype, self).__init__(*args, **kwargs)
+        data_class_kwargs = {k: kwargs.get(k) for k in self.__dict__.keys()}
+        super(MyPromptGenotype, self).__init__(*args, **data_class_kwargs)
         self.answer = kwargs.get("answer", "")
 
 
